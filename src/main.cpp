@@ -79,11 +79,20 @@ int main() {
         in vec3 FragPos;
         out vec4 FragColor;
         uniform vec3 color;
+        uniform vec3 viewPos;
         void main(){
-            vec3 ld = normalize(vec3(1.0, 2.0, 3.0));
-            float d = max(dot(normalize(Normal), ld), 0.0);
-            vec3 c = (0.2 + 0.8*d) * color;
-            FragColor = vec4(c, 1.0);
+            vec3 lightPos = vec3(2.0, 4.0, 3.0);
+            vec3 lightColor = vec3(1.0, 1.0, 1.0);
+            vec3 ambient = 0.15 * color;
+            vec3 norm = normalize(Normal);
+            vec3 lightDir = normalize(lightPos - FragPos);
+            float diff = max(dot(norm, lightDir), 0.0);
+            vec3 diffuse = diff * lightColor * color;
+            vec3 viewDir = normalize(viewPos - FragPos);
+            vec3 halfDir = normalize(lightDir + viewDir);
+            float spec = pow(max(dot(norm, halfDir), 0.0), 64.0);
+            vec3 specular = spec * lightColor;
+            FragColor = vec4(ambient + diffuse + specular, 1.0);
         }
     )";
 
@@ -134,32 +143,65 @@ int main() {
 
     float proj[16];
     perspective(proj, PI/4.0f, 800.0f/600.0f, 0.1f, 100.0f);
-     float view[16] = {
+    float view[16] = {
         1, 0, 0, 0,
-        0, 0.7f, -0.7f, 0,
-        0, 0.7f,  0.7f, 0,
-        0, -2.0f, -5.0f, 1
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, -0.5f, -5.0f, 1
     };
 
-    float ballY = 1.5f;
+    float ballY = 2.0f;
+    float dropHeight = 2.0f;
     float ballVY = 0.0f;
     float gravity = -9.8f;
-    float damping = 0.7f;
-    float floorY = -0.0f;
     float radius = 0.5f;
+    float floorY = 0.0f;
+
+    int surface = 0;
+    float dampings[] = { 0.9f, 0.6f, 0.3f };
+    float floorColors[3][3] = {
+        {0.5f, 0.5f, 0.55f},
+        {0.4f, 0.6f, 0.4f},
+        {0.6f, 0.4f, 0.25f}
+    };
+
     double lastTime = glfwGetTime();
 
-  while (!glfwWindowShouldClose(window)) {
+    while (!glfwWindowShouldClose(window)) {
+        if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) surface = 0;
+        if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) surface = 1;
+        if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) surface = 2;
+        if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
+            ballY = dropHeight;
+            ballVY = 0.0f;
+        }
+        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) dropHeight += 0.01f;
+        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) dropHeight -= 0.01f;
+        if (dropHeight < 0.6f) dropHeight = 0.6f;
+        if (dropHeight > 4.0f) dropHeight = 4.0f;
+
         double now = glfwGetTime();
         float dt = (float)(now - lastTime);
+        if (dt > 0.05f) dt = 0.05f;
         lastTime = now;
+
+         static int lastSurface = -1;
+        if (surface != lastSurface) {
+            lastSurface = surface;
+            if (surface == 0) glfwSetWindowTitle(window, "Metal Ball Sim - Hard Surface");
+            else if (surface == 1) glfwSetWindowTitle(window, "Metal Ball Sim - Medium Surface");
+            else glfwSetWindowTitle(window, "Metal Ball Sim - Soft Surface");
+        }
 
         ballVY += gravity * dt;
         ballY += ballVY * dt;
 
         if (ballY - radius < floorY) {
             ballY = floorY + radius;
-            ballVY = -ballVY * damping;
+            if (fabs(ballVY) < 0.1f)
+                ballVY = 0.0f;
+            else
+                ballVY = -ballVY * dampings[surface];
         }
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -169,9 +211,9 @@ int main() {
         glUniformMatrix4fv(glGetUniformLocation(program, "view"), 1, GL_FALSE, view);
 
         float floorModel[16];
-        translate(floorModel, 0.0f, -0.5f, 0.0f);
+        translate(floorModel, 0.0f, 0.0f, 0.0f);
         glUniformMatrix4fv(glGetUniformLocation(program, "model"), 1, GL_FALSE, floorModel);
-        glUniform3f(glGetUniformLocation(program, "color"), 0.4f, 0.6f, 0.4f);
+        glUniform3f(glGetUniformLocation(program, "color"), floorColors[surface][0], floorColors[surface][1], floorColors[surface][2]);
         glBindVertexArray(floorVAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
@@ -179,13 +221,14 @@ int main() {
         translate(sphereModel, 0.0f, ballY, 0.0f);
         glUniformMatrix4fv(glGetUniformLocation(program, "model"), 1, GL_FALSE, sphereModel);
         glUniform3f(glGetUniformLocation(program, "color"), 0.7f, 0.7f, 0.85f);
+        glUniform3f(glGetUniformLocation(program, "viewPos"), 0.0f, 1.5f, 4.0f);
         glBindVertexArray(sphereVAO);
         glDrawElements(GL_TRIANGLES, sphereIdx.size(), GL_UNSIGNED_INT, 0);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-    
+
     glfwTerminate();
     return 0;
 }
