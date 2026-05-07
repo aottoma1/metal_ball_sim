@@ -1,3 +1,0 @@
-/home/aottoma/metal_ball_sim/build/CMakeFiles/MetalBallSim.dir
-/home/aottoma/metal_ball_sim/build/CMakeFiles/edit_cache.dir
-/home/aottoma/metal_ball_sim/build/CMakeFiles/rebuild_cache.dir
