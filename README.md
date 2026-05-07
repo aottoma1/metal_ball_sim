@@ -1,7 +1,7 @@
 
 # Metal Ball Collision Simulator
 
-OpenGL-based physics simulator using Euler's Integration
+OpenGL-based physics simulator using Euler's Integration and varying difuse coefficients applied on surfaces to demonstrate how different materials absorb kinect energy.
 
 
 ## Dependencies
@@ -25,11 +25,19 @@ cmake ..
 make
 ```
 ## Textures
-To work properly, the textures folder must be moved from the root folder into the created build folder.
+To work properly, the textures folder must be copied from the root folder and placed into the newly created build folder.
+
+```bash
+cp -r ../textures .
+```
 ## Run
 ```bash
 ./MetalBallSim
 ```
+## Controls
+- 1 / 2 / 3 - Change Surface Type
+- Up / Down - Move Drop Height
+- R - Reset Ball Position
 ## Authors
 
 - [Akash Manghnani](https://www.github.com/AkashManghnani)
