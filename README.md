@@ -1,7 +1,7 @@
 
 # Metal Ball Collision Simulator
 
-OpenGL-based physics simulator using Euler's Integration and varying diffuse coefficients applied on surfaces to demonstrate how different materials absorb kinect energy.
+OpenGL-based physics simulator using Euler's Integration and varying diffuse coefficients applied on surfaces to demonstrate how different materials absorb kinetic energy.
 
 
 ## Dependencies
