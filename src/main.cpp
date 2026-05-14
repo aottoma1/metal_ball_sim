@@ -10,9 +10,7 @@
 
 const float PI = 3.14159265358979f;
 
-// ---------------------------------------------------------------------------
-// Sphere generation — position, normal, UV, tangent (11 floats/vert)
-// ---------------------------------------------------------------------------
+// Sphere Mesh Generation: creates vertices with position, normal, UV, and tangent for a UV sphere
 void generateSphere(std::vector<float>& vertices, std::vector<unsigned int>& indices,
                     float radius, int sectorCount, int stackCount) {
     float sectorStep = 2 * PI / sectorCount;
@@ -51,9 +49,7 @@ void generateSphere(std::vector<float>& vertices, std::vector<unsigned int>& ind
     }
 }
 
-// ---------------------------------------------------------------------------
-// Math helpers
-// ---------------------------------------------------------------------------
+// Matrix utilities: perspective projection and translation (for model matrix)
 void perspective(float* m, float fov, float aspect, float n, float f) {
     float t = tanf(fov / 2.0f);
     m[0]=1/(aspect*t); m[1]=0; m[2]=0; m[3]=0;
@@ -69,9 +65,7 @@ void translate(float* m, float tx, float ty, float tz) {
     m[12]=tx; m[13]=ty; m[14]=tz; m[15]=1;
 }
 
-// ---------------------------------------------------------------------------
-// Texture loader
-// ---------------------------------------------------------------------------
+// Texture loading utility using stb_image.h
 unsigned int loadTexture(const char* path) {
     unsigned int id;
     glGenTextures(1, &id);
@@ -94,14 +88,11 @@ unsigned int loadTexture(const char* path) {
     return id;
 }
 
-// ---------------------------------------------------------------------------
-// Camera
-// ---------------------------------------------------------------------------
+// Camera position
 const float CAM_X = 0.0f, CAM_Y = 1.8f, CAM_Z = 7.0f;
 
-// ---------------------------------------------------------------------------
+
 // Main
-// ---------------------------------------------------------------------------
 int main() {
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -112,9 +103,7 @@ int main() {
     gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
     glEnable(GL_DEPTH_TEST);
 
-    // -----------------------------------------------------------------------
-    // Shaders — Blinn-Phong with color texture + tangent-space normal map
-    // -----------------------------------------------------------------------
+    // Shader sources: simple Blinn-Phong with normal mapping, 3 point lights, and a tint factor to darken the ball
     const char* vertSrc = R"(
         #version 330 core
         layout(location=0) in vec3 aPos;
@@ -215,9 +204,7 @@ int main() {
     glLinkProgram(program);
     glDeleteShader(vert); glDeleteShader(frag);
 
-    // -----------------------------------------------------------------------
-    // Sphere VAO  (stride = 11 floats: pos3 norm3 uv2 tan3)
-    // -----------------------------------------------------------------------
+    // Sphere VAO — generated UV sphere with position, normal, UV, and tangent
     std::vector<float> sphereVerts;
     std::vector<unsigned int> sphereIdx;
     generateSphere(sphereVerts, sphereIdx, 0.5f, 36, 18);
@@ -236,10 +223,7 @@ int main() {
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)(6*sizeof(float))); glEnableVertexAttribArray(2);
     glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, stride, (void*)(8*sizeof(float))); glEnableVertexAttribArray(3);
 
-    // -----------------------------------------------------------------------
-    // Floor VAO — flat quad, UV 0-1, normal up, tangent along +X
-    // Layout: pos3 norm3 uv2 tan3
-    // -----------------------------------------------------------------------
+    // Floor VAO — simple quad with position, normal, UV, and tangent (tangent is just +X since it's a flat plane)
     float floorVerts[] = {
         -2.0f, 0.0f, -2.0f,  0,1,0,  0,1,  1,0,0,
          2.0f, 0.0f, -2.0f,  0,1,0,  1,1,  1,0,0,
@@ -260,11 +244,9 @@ int main() {
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)(6*sizeof(float))); glEnableVertexAttribArray(2);
     glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, stride, (void*)(8*sizeof(float))); glEnableVertexAttribArray(3);
 
-    // -----------------------------------------------------------------------
-    // Load textures
-    // -----------------------------------------------------------------------
-    unsigned int metal027Color  = loadTexture("textures/Metal027_Color.jpg");
-    unsigned int metal027Normal = loadTexture("textures/Metal027_Normal.jpg");
+    // Load textures: 3 floor types + ball texture
+    unsigned int metal047Color  = loadTexture("textures/Metal047A_Color.jpg");
+    unsigned int metal047Normal = loadTexture("textures/Metal047A_Normal.jpg");
     unsigned int metal038Color  = loadTexture("textures/Metal038_Color.jpg");
     unsigned int metal038Normal = loadTexture("textures/Metal038_Normal.jpg");
     unsigned int woodColor    = loadTexture("textures/Wood058_Color.jpg");
@@ -279,9 +261,7 @@ int main() {
         { rubberColor,    rubberNormal    },   // Soft  (Rubber)
     };
 
-    // -----------------------------------------------------------------------
-    // Matrices
-    // -----------------------------------------------------------------------
+    // Projection and view matrices
     float proj[16];
     perspective(proj, PI/4.0f, 800.0f/600.0f, 0.1f, 100.0f);
     float view[16] = {
@@ -296,9 +276,7 @@ int main() {
     glUniform1i(glGetUniformLocation(program, "colorMap"),  0);
     glUniform1i(glGetUniformLocation(program, "normalMap"), 1);
 
-    // -----------------------------------------------------------------------
     // Simulation state
-    // -----------------------------------------------------------------------
     float ballX = 0.0f, ballY = 2.0f;
     float ballVX = 0.0f, ballVY = 0.0f;
     float dropHeight     = 2.0f;
@@ -413,14 +391,14 @@ int main() {
         glBindVertexArray(floorVAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-        // Ball — dark steel texture, high shininess
+        // Ball — golden texture, high shininess
         float sphereModel[16]; translate(sphereModel, ballX, ballY, 0.0f);
         glUniformMatrix4fv(glGetUniformLocation(program,"model"), 1, GL_FALSE, sphereModel);
         glUniform1f(glGetUniformLocation(program,"shininess"), 128.0f);
         glUniform1f(glGetUniformLocation(program,"uvScale"), 1.0f);
         glUniform1f(glGetUniformLocation(program,"tint"), 0.6f);
-        glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, metal027Color);
-        glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, metal027Normal);
+        glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, metal047Color);
+        glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, metal047Normal);
         glBindVertexArray(sphereVAO);
         glDrawElements(GL_TRIANGLES, (GLsizei)sphereIdx.size(), GL_UNSIGNED_INT, 0);
 

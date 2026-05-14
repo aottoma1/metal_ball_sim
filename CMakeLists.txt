@@ -10,3 +10,7 @@ include_directories(include)
 
 add_executable(MetalBallSim src/main.cpp src/glad.c)
 target_link_libraries(MetalBallSim OpenGL::GL glfw)
+
+if(APPLE)
+    target_compile_definitions(MetalBallSim PRIVATE GL_SILENCE_DEPRECATION)
+endif()
